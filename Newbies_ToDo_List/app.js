@@ -1,38 +1,39 @@
 const express = require('express');
-const bodyParser = require('body-parser');
-const { Pool } = require('pg');
 const app = express();
-const port = 3000;
+const bodyParser = require('body-parser');
+const db = require('./db');
 
-//Postgresql database info
-const pool = new Pool({
-  user: 'robert',
-  host: 'localhost',
-  database: 'Newbies_ToDo',
-  password: 'Cookers5',
-  port: 5432,
-});
-
+// Middleware to parse incoming JSON data
 app.use(bodyParser.json());
 
-// Endpoint handler for creating a new task
-app.post('/api/tasks', async (req, res) => {
+// Route to get all tasks
+app.get('/tasks', async (req, res) => {
   try {
-    const { name, description, due_date } = req.body;
-
-    const query = 'INSERT INTO tasks (name, description, due_date) VALUES ($1, $2, $3) RETURNING *';
-    const values = [name, description, due_date];
-
-    const result = await pool.query(query, values);
-
-    res.status(201).json(result.rows[0]);
+    const tasks = await db.query('SELECT * FROM tblTask');
+    res.json(tasks);
   } catch (err) {
-    console.error('Error creating task:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error(err);
+    res.status(500).json({ message: 'Internal server error' });
   }
 });
 
-// Start the server
-app.listen(port, () => {
-  console.log(`Server is running on http://localhost:${port}`);
+// Route to create a new task
+app.post('/tasks', async (req, res) => {
+  const { name, description, due_date } = req.body;
+  try {
+    const result = await db.query(
+      'INSERT INTO tblTask (name, description, due_date) VALUES ($1, $2, $3) RETURNING *',
+      [name, description, due_date]
+    );
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+
+
+app.listen(3000, () => {
+  console.log('Server started on port 3000');
 });
